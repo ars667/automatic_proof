@@ -69,21 +69,32 @@ class Implication:
         return Implication(new_antecedent, new_consequent)
 
 
-A = Variable("A")
-B = Variable("B")
-C = Variable("C")
+class Auto_proof:
+    def __init__(self):
+        A = Variable("A")
+        B = Variable("B")
+        C = Variable("C")
+        axiom1 = Implication(A, Implication(B, A))
+        axiom2 = Implication(Implication(A, Implication(B, C)), Implication(Implication(A, B), Implication(A, C)))
+        axiom3 = Implication(Implication(Negation(B), Negation(A)), Implication(Implication(Negation(B), A), B))
+        self.identities = [axiom1, axiom2, axiom3]
 
-# Создаем выражения с использованием переменных, отрицаний и импликаций
-expr1 = Expression(Implication(A, Negation(B)))  # (A → ¬B)
-expr2 = Expression(Implication(expr1, C))  # ((A → ¬B) → C)
+    def step(self):
+        new_exprssions = []
+        for i in self.identities:
+            for j in self.identities:
+                if isinstance(i, Implication):
+                    if isinstance(i.antecedent, Variable):
+                        new_exprssions.append(i.consequent.substitute(i.antecedent, j))
+        for i in new_exprssions:
+            self.identities.append(i)
 
-axiom1 = Implication(A, Implication(B, A))  # A1: (A → (B → A))
-axiom2 = Implication(Implication(A, Implication(B, C)), Implication(Implication(A, B), Implication(A, C)))  # A2
-axiom3 = Implication(Implication(Negation(B), Negation(A)), Implication(Implication(Negation(B), A), B))  # A3
+    def print_all_identities(self):
+        for i in self.identities:
+            print(repr(i))
 
-print("Исходное выражение:", axiom2)
 
-# Подстановка: заменим A на (B → C)
-new_expr = axiom2.substitute('A', axiom1)
-
-print("После замены A на (B → C):", new_expr)
+proofer = Auto_proof()
+proofer.step()
+proofer.step()
+proofer.print_all_identities()
