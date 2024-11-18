@@ -93,8 +93,24 @@ class Auto_proof:
         for i in self.identities:
             print(repr(i))
 
+    def is_proofed(self, expr):
+        for identity in self.identities:
+            if identity.__eq__(expr):
+                return True
+        return False
+
+    def proof(self, expr):
+        i = 0
+        while not self.is_proofed(expr):
+            i += 1
+            if i >= 10 ** 8:
+                print("wrong!")
+            self.step()
+        print("proofed!")
+
 
 proofer = Auto_proof()
-proofer.step()
-proofer.step()
+for i in range(3):
+    proofer.step()
 proofer.print_all_identities()
+#proofer.proof(Negation(Implication(Variable('A'), Negation(Variable('B')))))
