@@ -166,7 +166,7 @@ def check_consistency(clauses):
         clauses_list = list(simplified_clauses)
 
         for i in range(len(clauses_list)):
-            for j in range(len(clauses_list)):
+            for j in range(i+1,len(clauses_list)):
                 if i == j:
                     continue
                 resolvent = resolve(clauses_list[i], clauses_list[j])
@@ -202,11 +202,15 @@ def check_consistency(clauses):
 A = Variable("A")
 B = Variable("B")
 C = Variable("C")
+D = Variable("D")
+E = Variable("E")
 
+#пример с яблоками
 clauses = [
-    Expression(Implication(A, B)),   # (A -> B)
-    Expression(Implication(B, Negation(A))),   # (B -> not A)
-    Expression(A)         # A
+    Expression(A),   # X1
+    Expression(Implication(A, C)),   #X1 -> X3
+    Expression(B), #X2
+    Expression(Negation(C))         #not X3
 ]
 
 print("Противоречивы ли посылки?", check_consistency(clauses))
