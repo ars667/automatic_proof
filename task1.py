@@ -1,22 +1,3 @@
-class Expression:
-    def __init__(self, content):
-        """
-        Класс для хранения любого логического выражения.
-        content: объект класса Variable, Negation или Implication.
-        """
-        self.content = content
-
-    def __repr__(self):
-        return repr(self.content)
-
-    def substitute(self, var, expr):
-        """
-        Заменяет все вхождения переменной var на выражение expr внутри content.
-        """
-        # Рекурсивно вызываем substitute у содержимого
-        return Expression(self.content.substitute(var, expr))
-
-
 class Variable:
     def __init__(self, name):
         self.name = name
@@ -58,9 +39,7 @@ class Implication:
         return f"({self.antecedent} → {self.consequent})"
 
     def __eq__(self, other):
-        return (isinstance(other, Implication) and
-                self.antecedent == other.antecedent and
-                self.consequent == other.consequent)
+        return (isinstance(other, Implication) and self.antecedent == other.antecedent and self.consequent == other.consequent)
 
     def substitute(self, var, expr):
         # Заменяем переменную в обеих частях импликации
@@ -79,13 +58,28 @@ class Auto_proof:
         axiom3 = Implication(Implication(Negation(B), Negation(A)), Implication(Implication(Negation(B), A), B))
         self.identities = [axiom1, axiom2, axiom3]
 
+    def modus_ponsens(self, expr1, expr2):
+        if isinstance(expr1, Implication):
+            if isinstance(expr1.antecedent, Variable):
+                return expr1.consequent.substitute(expr1.antecedent, expr2)
+            if isinstance(expr1.antecedent, Implication):
+                return Implication(self.modus_ponsens(expr1.antecedent, expr2), expr1.consequent)
+            if isinstance(expr1, Negation):
+                return Negation(self.modus_ponsens(expr1.expression, expr2))
+            if isinstance(expr1, Variable):
+                return expr1
+        return expr1
+
+    def is_uniq(self, expr, arr):
+        return all((not (i.__eq__(expr))) for i in arr)
+
     def step(self):
         new_exprssions = []
         for i in self.identities:
             for j in self.identities:
-                if isinstance(i, Implication):
-                    if isinstance(i.antecedent, Variable):
-                        new_exprssions.append(i.consequent.substitute(i.antecedent, j))
+                new = self.modus_ponsens(i, j)
+                if self.is_uniq(new, self.identities) and self.is_uniq(new, new_exprssions):
+                    new_exprssions.append(new)
         for i in new_exprssions:
             self.identities.append(i)
 
@@ -93,24 +87,31 @@ class Auto_proof:
         for i in self.identities:
             print(repr(i))
 
-    def is_proofed(self, expr):
-        for identity in self.identities:
-            if identity.__eq__(expr):
-                return True
-        return False
-
-    def proof(self, expr):
-        i = 0
-        while not self.is_proofed(expr):
-            i += 1
-            if i >= 10 ** 8:
-                print("wrong!")
+    def proof(self, target):
+        while True:
+            self.print_all_identities()
             self.step()
-        print("proofed!")
+            for i in target:
+                for j in self.identities:
+                    if i.__eq__(j):
+                        print("proofed!")
 
 
 proofer = Auto_proof()
-for i in range(3):
-    proofer.step()
-proofer.print_all_identities()
-#proofer.proof(Negation(Implication(Variable('A'), Negation(Variable('B')))))
+
+A = Variable("A")
+B = Variable("B")
+C = Variable("C")
+
+target = [
+    Implication(Negation(Implication(A, B)), A),
+    Implication(Implication(A, B), B),
+    Implication(A, Implication(B, Implication(A, B))),
+    Implication(A, Implication(A, B)),
+    Implication(B, Implication(A, B)),
+    Implication(Implication(A, C), Implication(Implication(B, C), Implication(Implication(A, B), C))),
+    Implication(Negation(A), Implication(A, B)),
+    Implication(A, Negation(A))
+]
+
+proofer.proof(target)
