@@ -39,7 +39,8 @@ class Implication:
         return f"({self.antecedent} → {self.consequent})"
 
     def __eq__(self, other):
-        return (isinstance(other, Implication) and self.antecedent == other.antecedent and self.consequent == other.consequent)
+        return (isinstance(other,
+                           Implication) and self.antecedent == other.antecedent and self.consequent == other.consequent)
 
     def substitute(self, var, expr):
         # Заменяем переменную в обеих частях импликации
@@ -59,16 +60,17 @@ class Auto_proof:
         self.identities = [axiom1, axiom2, axiom3]
 
     def modus_ponsens(self, expr1, expr2):
+        new_expressions = []
         if isinstance(expr1, Implication):
             if isinstance(expr1.antecedent, Variable):
-                return expr1.consequent.substitute(expr1.antecedent, expr2)
+                new_expressions.append(expr1.consequent.substitute(expr1.antecedent, expr2))
             if isinstance(expr1.antecedent, Implication):
-                return Implication(self.modus_ponsens(expr1.antecedent, expr2), expr1.consequent)
-            if isinstance(expr1, Negation):
-                return Negation(self.modus_ponsens(expr1.expression, expr2))
-            if isinstance(expr1, Variable):
-                return expr1
-        return expr1
+                for ant in self.modus_ponsens(expr1.antecedent, expr2):
+                    new_expressions.append(Implication(ant, expr1.consequent))
+        if isinstance(expr1, Negation):
+            for neg in self.modus_ponsens(expr1.expression, expr2):
+                new_expressions.append(Negation(neg))
+        return new_expressions
 
     def is_uniq(self, expr, arr):
         return all((not (i.__eq__(expr))) for i in arr)
@@ -78,10 +80,23 @@ class Auto_proof:
         for i in self.identities:
             for j in self.identities:
                 new = self.modus_ponsens(i, j)
-                if self.is_uniq(new, self.identities) and self.is_uniq(new, new_exprssions):
-                    new_exprssions.append(new)
+                for x in new:
+                    if self.is_uniq(x, self.identities) and self.is_uniq(x, new_exprssions):
+                        new_exprssions.append(x)
+        self.make_new_identities()
         for i in new_exprssions:
             self.identities.append(i)
+
+    def make_new_identities(self):
+        old = self.identities.copy()
+        for identity in old:
+            A_B_identity = identity.substitute(Variable('A'), Variable('X'))
+            A_B_identity = A_B_identity.substitute(Variable('B'), Variable('A'))
+            A_B_identity = A_B_identity.substitute(Variable('X'), Variable('B'))
+            self.identities.append(A_B_identity)
+
+            A_A_identity = identity.substitute(Variable('B'), Variable('A'))
+            self.identities.append(A_A_identity)
 
     def print_all_identities(self):
         for i in self.identities:
@@ -104,14 +119,14 @@ B = Variable("B")
 C = Variable("C")
 
 target = [
-    Implication(Negation(Implication(A, B)), A),
-    Implication(Implication(A, B), B),
-    Implication(A, Implication(B, Implication(A, B))),
-    Implication(A, Implication(A, B)),
-    Implication(B, Implication(A, B)),
-    Implication(Implication(A, C), Implication(Implication(B, C), Implication(Implication(A, B), C))),
+
+    Implication(Negation(Implication(A, Negation(B))), A),
+    Implication(Negation(Implication(A, Negation(B))), B),
+    Implication(A, Implication(B, Negation(Implication(A, Negation(B))))),
+    Implication(A, Implication(Negation(A), B)),
+    Implication(B, Implication(Negation(A), B)),
     Implication(Negation(A), Implication(A, B)),
-    Implication(A, Negation(A))
+    Implication(Negation(A), Negation(A))
 ]
 
 proofer.proof(target)
