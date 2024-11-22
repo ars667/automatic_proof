@@ -56,7 +56,7 @@ class Auto_proof:
         C = Variable("C")
         axiom1 = Implication(A, Implication(B, A))
         axiom2 = Implication(Implication(A, Implication(B, C)), Implication(Implication(A, B), Implication(A, C)))
-        axiom3 = Implication(Implication(Negation(B), Negation(A)), Implication(Implication(Negation(B), A), B))
+        axiom3 = Implication(Implication(A, Implication(B, A)), Implication(A, A))
         self.identities = [axiom1, axiom2, axiom3]
         #self.identities = [axiom1, axiom2]
 
