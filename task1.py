@@ -16,8 +16,10 @@ class Variable:
 
 
 class Negation:
+
     def __init__(self, expression):
         self.expression = expression
+        self.history = ''
 
     def __repr__(self):
         return f"¬{self.expression}"
@@ -27,13 +29,17 @@ class Negation:
 
     def substitute(self, var, expr):
         # Заменяем переменную внутри отрицания
-        return Negation(self.expression.substitute(var, expr))
+        neg = Negation(self.expression.substitute(var, expr))
+        neg.history = self.history
+        return neg
 
 
 class Implication:
+
     def __init__(self, antecedent, consequent):
         self.antecedent = antecedent
         self.consequent = consequent
+        self.history = ''
 
     def __repr__(self):
         return f"({self.antecedent} → {self.consequent})"
@@ -46,7 +52,9 @@ class Implication:
         # Заменяем переменную в обеих частях импликации
         new_antecedent = self.antecedent.substitute(var, expr)
         new_consequent = self.consequent.substitute(var, expr)
-        return Implication(new_antecedent, new_consequent)
+        imp = Implication(new_antecedent, new_consequent)
+        imp.history = self.history
+        return imp
 
 
 class Auto_proof:
@@ -58,7 +66,7 @@ class Auto_proof:
         axiom2 = Implication(Implication(A, Implication(B, C)), Implication(Implication(A, B), Implication(A, C)))
         axiom3 = Implication(Implication(Negation(B), Negation(A)), Implication(Implication(Negation(B), A), B))
         self.identities = [axiom1, axiom2, axiom3]
-        #self.identities = [axiom1, axiom2]
+        # self.identities = [axiom1, axiom2]
 
     def modus_ponsens(self, expr1, expr2):
         new_expressions = []
@@ -73,6 +81,9 @@ class Auto_proof:
         if isinstance(expr1, Negation):
             for neg in self.modus_ponsens(expr1.expression, expr2):
                 new_expressions.append(Negation(neg))
+        for expr in new_expressions:
+            if isinstance(expr, Implication) or isinstance(expr, Negation):
+                expr.history += f'\n получено из {expr1} и {expr2}\n {expr1} получно из {expr1.history} и {expr2} получено из {expr2.history}'
         return new_expressions
 
     def is_uniq(self, expr, arr):
@@ -94,24 +105,33 @@ class Auto_proof:
         old = self.identities.copy()
         for identity in old:
             A_B_C_identity = identity.substitute(Variable('C'), Variable('A'))
+            A_B_C_identity.history = identity.history
             self.identities.append(A_B_C_identity)
 
             A_B_identity = identity.substitute(Variable('A'), Variable('X'))
+            A_B_identity.history = identity.history
             A_B_identity = A_B_identity.substitute(Variable('B'), Variable('A'))
+            A_B_identity.history = A_B_identity.history
             A_B_identity = A_B_identity.substitute(Variable('X'), Variable('B'))
+            A_B_identity.history = A_B_identity.history
+            A_B_identity.history = identity.history
             self.identities.append(A_B_identity)
 
             A_A_identity = identity.substitute(Variable('B'), Variable('A'))
+            A_A_identity.history = identity.history
             self.identities.append(A_A_identity)
 
-            B_BA_identity = identity.substitute(Variable('B'), Implication(Variable('B'), Variable('A')))
-            A_AB_identity = identity.substitute(Variable('A'), Implication(Variable('A'), Variable('B')))
-            self.identities.append((B_BA_identity))
-            self.identities.append((A_AB_identity))
+            # B_BA_identity = identity.substitute(Variable('B'), Implication(Variable('B'), Variable('A')))
+            # B_BA_identity.history = identity.history
+            # A_AB_identity = identity.substitute(Variable('A'), Implication(Variable('A'), Variable('B')))
+            # A_AB_identity.history = identity.history
+            # self.identities.append((B_BA_identity))
+            # self.identities.append((A_AB_identity))
 
     def print_all_identities(self):
         for i in self.identities:
             print(repr(i))
+            print(i.history)
 
     def proof(self, target):
 
@@ -121,6 +141,7 @@ class Auto_proof:
             for i in target:
                 for j in self.identities:
                     if i.__eq__(j):
+                        print(i.history)
                         print("proofed!")
 
 
@@ -131,8 +152,8 @@ B = Variable("B")
 C = Variable("C")
 
 target = [
-    #Implication(Implication(A, B), Implication(A, A)),
-    Implication(Implication(A, Implication(B, A)), Implication(A, A)),
+    Implication(Implication(A, B), Implication(A, A)),
+    # Implication(Implication(A, Implication(B, A)), Implication(A, A)),
     Implication(A, A),
     Implication(Negation(Implication(A, Negation(B))), A),
     Implication(Negation(Implication(A, Negation(B))), B),
