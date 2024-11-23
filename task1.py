@@ -9,7 +9,6 @@ class Variable:
         return isinstance(other, Variable) and self.name == other.name
 
     def substitute(self, var, expr):
-        # Заменяет переменную, если она совпадает с подставляемой
         if self == var:
             return expr
         return self
@@ -28,7 +27,6 @@ class Negation:
         return isinstance(other, Negation) and self.expression == other.expression
 
     def substitute(self, var, expr):
-        # Заменяем переменную внутри отрицания
         neg = Negation(self.expression.substitute(var, expr))
         neg.history = self.history
         return neg
@@ -49,7 +47,6 @@ class Implication:
                            Implication) and self.antecedent == other.antecedent and self.consequent == other.consequent)
 
     def substitute(self, var, expr):
-        # Заменяем переменную в обеих частях импликации
         new_antecedent = self.antecedent.substitute(var, expr)
         new_consequent = self.consequent.substitute(var, expr)
         imp = Implication(new_antecedent, new_consequent)
@@ -66,7 +63,6 @@ class Auto_proof:
         axiom2 = Implication(Implication(A, Implication(B, C)), Implication(Implication(A, B), Implication(A, C)))
         axiom3 = Implication(Implication(Negation(B), Negation(A)), Implication(Implication(Negation(B), A), B))
         self.identities = [axiom1, axiom2, axiom3]
-        # self.identities = [axiom1, axiom2]
 
     def modus_ponsens(self, expr1, expr2):
         new_expressions = []
@@ -83,7 +79,7 @@ class Auto_proof:
                 new_expressions.append(Negation(neg))
         for expr in new_expressions:
             if isinstance(expr, Implication) or isinstance(expr, Negation):
-                expr.history += f'\n получено из {expr1} и {expr2}\n {expr1} получно из {expr1.history} и {expr2} получено из {expr2.history}'
+                expr.history += f'\n получено из {expr1} и {expr2}\n {expr1} получно из {expr1.history}\n и {expr2} получено из {expr2.history}'
         return new_expressions
 
     def is_uniq(self, expr, arr):
@@ -102,31 +98,22 @@ class Auto_proof:
             self.identities.append(i)
 
     def make_new_identities(self):
+        # Этот метод частично заменяет отсутствующую унификацию
         old = self.identities.copy()
         for identity in old:
             A_B_C_identity = identity.substitute(Variable('C'), Variable('A'))
-            A_B_C_identity.history = identity.history
             self.identities.append(A_B_C_identity)
-
             A_B_identity = identity.substitute(Variable('A'), Variable('X'))
-            A_B_identity.history = identity.history
             A_B_identity = A_B_identity.substitute(Variable('B'), Variable('A'))
-            A_B_identity.history = A_B_identity.history
             A_B_identity = A_B_identity.substitute(Variable('X'), Variable('B'))
-            A_B_identity.history = A_B_identity.history
-            A_B_identity.history = identity.history
             self.identities.append(A_B_identity)
-
             A_A_identity = identity.substitute(Variable('B'), Variable('A'))
-            A_A_identity.history = identity.history
             self.identities.append(A_A_identity)
 
-            # B_BA_identity = identity.substitute(Variable('B'), Implication(Variable('B'), Variable('A')))
-            # B_BA_identity.history = identity.history
-            # A_AB_identity = identity.substitute(Variable('A'), Implication(Variable('A'), Variable('B')))
-            # A_AB_identity.history = identity.history
-            # self.identities.append((B_BA_identity))
-            # self.identities.append((A_AB_identity))
+            B_BA_identity = identity.substitute(Variable('B'), Implication(Variable('B'), Variable('A')))
+            A_AB_identity = identity.substitute(Variable('A'), Implication(Variable('A'), Variable('B')))
+            self.identities.append((B_BA_identity))
+            self.identities.append((A_AB_identity))
 
     def print_all_identities(self):
         for i in self.identities:
@@ -136,13 +123,13 @@ class Auto_proof:
     def proof(self, target):
 
         while True:
-            self.print_all_identities()
+            # self.print_all_identities()
             self.step()
             for i in target:
                 for j in self.identities:
                     if i.__eq__(j):
-                        print(i.history)
-                        print("proofed!")
+                        print(j.__repr__())
+                        print(j.history)
 
 
 proofer = Auto_proof()
@@ -152,8 +139,9 @@ B = Variable("B")
 C = Variable("C")
 
 target = [
+    # Промежуточное перед A11
     Implication(Implication(A, B), Implication(A, A)),
-    # Implication(Implication(A, Implication(B, A)), Implication(A, A)),
+    Implication(Implication(A, Implication(B, A)), Implication(A, A)),
     Implication(A, A),
     Implication(Negation(Implication(A, Negation(B))), A),
     Implication(Negation(Implication(A, Negation(B))), B),
@@ -162,7 +150,8 @@ target = [
     Implication(B, Implication(Negation(A), B)),
     Implication(Negation(A), Implication(A, B)),
     Implication(Negation(A), Negation(A)),
-    # Implication(Implication(A, B), Implication(A, (Implication(C, Implication(Implication(A, B), Implication(A, C))))))
+    # Наше тождество
+    Implication(Implication(A, B), Implication(A, (Implication(C, Implication(Implication(A, B), Implication(A, C))))))
 ]
 
 proofer.proof(target)
