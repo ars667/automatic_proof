@@ -74,78 +74,166 @@ class AutoProof:
         self.identities = [A1, A2, A3]
         self.variables = [A, B, C]
 
-    # Правила вывода
-    def modus_ponens(self, expr1, expr2):
-        if isinstance(expr1, Implication) and expr1.antecedent == expr2:
-            return expr1.consequent
-        return None
+    # Правила вывода:
+    # Модус поненс
+    def modus_ponsens(self, expr1, expr2):
+        new_expressions = []
+        if isinstance(expr1, Implication):
+            if isinstance(expr1.antecedent, Variable):
+                new_expressions.append(expr1.consequent.substitute(expr1.antecedent, expr2))
+            if isinstance(expr1.antecedent, Implication):
+                for ant in self.modus_ponsens(expr1.antecedent, expr2):
+                    new_expressions.append(Implication(ant, expr1.consequent))
+        if isinstance(expr1, Negation):
+            for neg in self.modus_ponsens(expr1.expression, expr2):
+                new_expressions.append(Negation(neg))
+        return new_expressions
 
+    # Модус толленс
     def modus_tollens(self, expr1, expr2):
+        new_expressions = []
         if isinstance(expr1, Implication) and isinstance(expr2, Negation):
             if expr1.consequent == expr2.expression:
-                return Negation(expr1.antecedent)
-        return None
+                 new_expressions.append(Negation(expr1.antecedent)) #
+        elif isinstance(expr1, Implication):
+            antecedent_results = self.modus_tollens(expr1.antecedent, expr2)#
+            consequent_results = self.modus_tollens(expr1.consequent, expr2)#
+            for ant in antecedent_results:#
+                new_expressions.append(Implication(ant, expr1.consequent))#
+            for cons in consequent_results:
+                new_expressions.append(Implication(expr1.antecedent, cons))#
+        elif isinstance(expr1, Negation):#
+            negated_results = self.modus_tollens(expr1.expression, expr2)#
+            for neg in negated_results:#
+                new_expressions.append(Negation(neg))#
+        return new_expressions#
 
+    # Разделительный силлогизм
     def disjunctive_syllogism(self, expr1, expr2):
-        if isinstance(expr1, Negation) and isinstance(expr2, Implication):
-            if expr2.antecedent == expr1.expression:
-                return expr2.consequent
+        if isinstance(expr1, Negation):
+            deeper = self.disjunctive_syllogism(expr1.expression, expr2)
+            if deeper:
+                return Negation(deeper)
+
+        if isinstance(expr2, Implication):
+            new_antecedent = self.disjunctive_syllogism(expr1, expr2.antecedent)
+            new_consequent = self.disjunctive_syllogism(expr1, expr2.consequent)
+            return Implication(new_antecedent or expr2.antecedent, new_consequent or expr2.consequent)
+
+        return None
+    
+        def hypothetical_syllogism(self, expr1, expr2):
+        if isinstance(expr1, Implication):
+            new_antecedent = self.hypothetical_syllogism(expr1.antecedent, expr2)
+            new_consequent = self.hypothetical_syllogism(expr1.consequent, expr2)
+
+            return Implication(new_antecedent or expr1.antecedent, new_consequent or expr1.consequent)
+        if isinstance(expr2, Implication):
+            new_antecedent = self.hypothetical_syllogism(expr1, expr2.antecedent)
+            new_consequent = self.hypothetical_syllogism(expr1, expr2.consequent)
+
+            return Implication(new_antecedent or expr2.antecedent, new_consequent or expr2.consequent)
+        elif isinstance(expr1, Negation):
+
+            negated_expr = self.hypothetical_syllogism(expr1.expression, expr2)
+            if negated_expr:
+                return Negation(negated_expr)
         return None
 
-    def hypothetical_syllogism(self, expr1, expr2):
+    # Простая конструктивная дилемма
+    def simple_constructive_dilemma(self, expr1, expr2):
         if isinstance(expr1, Implication) and isinstance(expr2, Implication):
-            if expr1.consequent == expr2.antecedent:
-                return Implication(expr1.antecedent, expr2.consequent)
+            if expr1.antecedent == expr2.antecedent:
+                return Implication(expr1.consequent, expr2.consequent)
+        elif isinstance(expr1, Negation):
+
+            negated_expr = self.simple_constructive_dilemma(expr1.expression, expr2)
+            if negated_expr:
+                return Negation(negated_expr)
+
         return None
 
+    # Сложная конструктивная дилемма
     def complex_constructive_dilemma(self, expr1, expr2, expr3):
-        if (isinstance(expr1, Implication) and isinstance(expr2, Implication) and
-                isinstance(expr3, Implication) and isinstance(expr3.antecedent, Variable)):
+        if isinstance(expr1, Implication) and isinstance(expr2, Implication) and isinstance(expr3, Implication):
             if expr1.antecedent == expr3.antecedent and expr2.antecedent == expr3.consequent:
                 return Implication(expr1.consequent, expr2.consequent)
+        elif isinstance(expr1, Negation):
+
+            negated_expr = self.complex_constructive_dilemma(expr1.expression, expr2, expr3)
+            if negated_expr:
+                return Negation(negated_expr)
+
         return None
 
+    def simple_destructive_dilemma(self, impl1, impl2, disjunction):
+        new_expressions = []
+        if (isinstance(impl1, Implication) and isinstance(impl2, Implication)
+                and impl1.antecedent == impl2.antecedent
+                and isinstance(disjunction, Implication)):
+            if disjunction.consequent == Negation(impl1.consequent) or disjunction.antecedent == Negation(impl2.consequent):
+                new_expressions.append(Negation(impl1.antecedent))
+        return new_expressions
+
+    def complex_destructive_dilemma(self, impl1, impl2, disjunction):
+        new_expressions = []
+        if (isinstance(impl1, Implication) and isinstance(impl2, Implication)
+                and isinstance(disjunction, Implication)):
+            if (disjunction.antecedent == Negation(impl1.consequent)
+                    and disjunction.consequent == Negation(impl2.consequent)):
+                new_expressions.append(Implication(Negation(impl1.antecedent), Negation(impl2.antecedent)))
+        return new_expressions
+
+    def is_uniq(self, expr, arr):
+        return all((not (i.__eq__(expr))) for i in arr)
 
     def step(self):
-        new_expressions = set()
-        # Применяем каждый из правил к парам теорем
-        for expr1 in self.identities:
-            for expr2 in self.identities:
-                new_expr = (
-                        self.modus_ponens(expr1, expr2) or
-                        self.modus_tollens(expr1, expr2) or
-                        self.disjunctive_syllogism(expr1, expr2) or
-                        self.hypothetical_syllogism(expr1, expr2)
-                )
-                if new_expr and new_expr not in self.identities:
-                    new_expressions.add(new_expr)
+        new_exprssions = []
+        for i in self.identities:
+            for j in self.identities:
+                new = self.modus_tollens(i,j)
+                for x in new:
+                    if self.is_uniq(x, self.identities) and self.is_uniq(x, new_exprssions):
+                        new_exprssions.append(x)
+        self.make_new_identities()
+        for i in new_exprssions:
+            self.identities.append(i)
 
-        # Добавляем новые выражения в доказанные
-        self.identities.extend(new_expressions)
+    def make_new_identities(self):
+        old = self.identities.copy()
+        for identity in old:
+            A_B_identity = identity.substitute(Variable('A'), Variable('X'))
+            A_B_identity = A_B_identity.substitute(Variable('B'), Variable('A'))
+            A_B_identity = A_B_identity.substitute(Variable('X'), Variable('B'))
+            self.identities.append(A_B_identity)
 
+            A_A_identity = identity.substitute(Variable('B'), Variable('A'))
+            self.identities.append(A_A_identity)
 
     def print_all_identities(self):
         for i in self.identities:
             print(repr(i))
 
-    # Основной метод доказательства
     def proof(self, target):
-        while target not in self.identities:
+        while True:
             self.step()
-            if target in self.identities:
-                print(f"Доказано: {target}")
-                return True
-            else:
-                print(f"Не удалось доказать: {target}")
-                return False
-        print(f"Доказано: {target}")
-        return True
+            for i in target:
+                for j in self.identities:
+                    if i.__eq__(j):
+                        print("proofed!:", j)
+                        return False
 
 
-prover = AutoProof()
 
-# Пример доказательства
+proofer = Auto_proof()
+
 A = Variable("A")
 B = Variable("B")
-target = Implication(A, B)
-prover.proof(target)
+C = Variable("C")
+
+target = [
+
+    Implication(Negation(Implication(A, Negation(B))), A),
+]
+
+proofer.proof(target)
